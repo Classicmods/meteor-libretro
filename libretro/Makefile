@@ -188,6 +188,41 @@ else ifneq (,$(findstring armv,$(platform)))
    SHARED := -shared -Wl,--no-undefined
    ENDIANNESS_DEFINES = -DLSB_FIRST
    fpic := -fPIC
+
+# Classic Platforms ####################
+# Platform affix = classic_<ISA>_<µARCH>
+# Help at https://modmyclassic.com/comp
+
+# (armv7 a7, hard point, neon based) ### 
+# NESC, SNESC, C64 mini 
+else ifeq ($(platform), classic_armv7_a7)
+	TARGET := $(TARGET_NAME)_libretro.so
+	fpic := -fPIC
+    SHARED := -shared -Wl,--no-undefined
+	CFLAGS += -Ofast \
+	-flto=4 -fwhole-program -fuse-linker-plugin \
+	-fdata-sections -ffunction-sections -Wl,--gc-sections \
+	-fno-stack-protector -fno-ident -fomit-frame-pointer \
+	-falign-functions=1 -falign-jumps=1 -falign-loops=1 \
+	-fno-unwind-tables -fno-asynchronous-unwind-tables -fno-unroll-loops \
+	-fmerge-all-constants -fno-math-errno \
+	-marm -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+	CXXFLAGS += $(CFLAGS)
+	CPPFLAGS += $(CFLAGS)
+	HAVE_NEON = 1
+	ARCH = arm
+	ENDIANNESS_DEFINES = -DLSB_FIRST
+	ifeq ($(shell echo `$(CC) -dumpversion` "< 4.9" | bc -l), 1)
+	  CFLAGS += -march=armv7-a
+	else
+	  CFLAGS += -march=armv7ve
+	  # If gcc is 5.0 or later
+	  ifeq ($(shell echo `$(CC) -dumpversion` ">= 5" | bc -l), 1)
+	    LDFLAGS += -static-libgcc -static-libstdc++
+	  endif
+	endif
+#######################################
+
 ifneq (,$(findstring cortexa8,$(platform)))
    PLATFORM_DEFINES += -marm -mcpu=cortex-a8
 else ifneq (,$(findstring cortexa9,$(platform)))
@@ -267,12 +302,13 @@ include $(THEOS_MAKE_PATH)/library.mk
 else
 all: $(TARGET)
 $(TARGET): $(OBJECTS)
+	@echo "** BUILDING $(TARGET) FOR PLATFORM $(platform) **"
 ifeq ($(STATIC_LINKING), 1)
 	$(AR) rcs $@ $(OBJECTS)
 else
 	$(CXX) -o $@ $(SHARED) $(OBJECTS) $(LDFLAGS) $(LIBS)
 endif
-
+	@echo "** BUILD SUCCESSFUL! GG NO RE **"
 
 clean-objs:
 	rm -f $(OBJECTS)
