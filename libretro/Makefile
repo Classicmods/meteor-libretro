@@ -220,6 +220,34 @@ else ifeq ($(platform), classic_armv7_a7)
 	    CXX += -static-libgcc -static-libstdc++
 	  endif
 	endif
+
+# (armv8 a35, hard point, neon based) ###
+# Playstation Classic
+else ifeq ($(platform), classic_armv8_a35)
+	TARGET := $(TARGET_NAME)_libretro.so
+	fpic := -fPIC
+    SHARED := -shared -Wl,--no-undefined
+	CC += -Ofast \
+	-flto=4 -fwhole-program -fuse-linker-plugin \
+	-fdata-sections -ffunction-sections -Wl,--gc-sections \
+	-fno-stack-protector -fno-ident -fomit-frame-pointer \
+	-falign-functions=1 -falign-jumps=1 -falign-loops=1 \
+	-fno-unwind-tables -fno-asynchronous-unwind-tables -fno-unroll-loops \
+	-fmerge-all-constants -fno-math-errno \
+	-marm -mtune=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard
+	CXX += $(CFLAGS)
+	HAVE_NEON = 1
+	ARCH = arm
+	ENDIANNESS_DEFINES = -DLSB_FIRST
+	ifeq ($(shell echo `$(CC) -dumpversion` "< 4.9" | bc -l), 1)
+	  CC += -march=armv8-a
+	else
+	  CC += -march=armv8-a
+	  # If gcc is 5.0 or later
+	  ifeq ($(shell echo `$(CC) -dumpversion` ">= 5" | bc -l), 1)
+	    CXX += -static-libgcc -static-libstdc++
+	  endif
+	endif
 #######################################
 
 ifneq (,$(findstring cortexa8,$(platform)))
